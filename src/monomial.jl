@@ -2,19 +2,18 @@
 #always assume the bases are sorted
 struct monomial{N}
     coeff::Rational{Int64}
-    factors::Tuple{Vararg{Tuple{symmetric_polynomial{N},Int}}}
+    factors::Array{Tuple{symmetric_polynomial{N},Int},1}
 end
 
-monomial(c,x::symmetric_polynomial{N}) where {N} = monomial{N}(c,((x,1),))
-summable(x::T,y::T) where T<:monomial = x.factors == y.factors
+monomial(c,x::symmetric_polynomial{N}) where {N} = monomial{N}(c,[(x,1)])
+summable(x::monomial{N},y::monomial{N}) where {N} = x.factors == y.factors
 to_monomial(x::symmetric_polynomial{N}) where {N} = monomial(1//1,x)
-Base.:+(x::monomial{N},y::monomial{N}) where {N} =
-    summable(x,y) ? monomial{N}(x.coeff + y.coeff,x.factors) : throw(DomainError("input factors need to be same"))
+Base.:+(x::monomial{N},y::monomial{N}) where {N} = monomial{N}(x.coeff + y.coeff,x.factors)
 
 function Base.:*(x::monomial{N},y::monomial{N}) where {N}
-    x.factors==y.factors==tuple() && return monomial{N}(x.coeff*y.coeff,tuple())
-    x.factors==tuple() && return monomial{N}(x.coeff*y.coeff,y.factors)
-    y.factors==tuple() && return monomial{N}(x.coeff*y.coeff,x.factors)
+    x.factors==y.factors==[] && return monomial{N}(x.coeff*y.coeff,[])
+    x.factors==[] && return monomial{N}(x.coeff*y.coeff,y.factors)
+    y.factors==[] && return monomial{N}(x.coeff*y.coeff,x.factors)
     #use a double iterator method
     tmp_factors = []
     i,j=1,1
@@ -32,11 +31,11 @@ function Base.:*(x::monomial{N},y::monomial{N}) where {N}
         end
     end
     if i <= length(x.factors)
-        push!(tmp_factors,x.factors[i:end]...)
+        append!(tmp_factors,x.factors[i:end])
     elseif j <= length(y.factors)
-        push!(tmp_factors,y.factors[j:end]...)
+        append!(tmp_factors,y.factors[j:end])
     end
-    return monomial{N}(x.coeff * y.coeff,tuple(tmp_factors...))
+    return monomial{N}(x.coeff * y.coeff,tmp_factors)
 end
 
 Base.:*(x::T,y) where T<:monomial = monomial(x.coeff * y,x.factors)

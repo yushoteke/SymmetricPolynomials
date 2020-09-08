@@ -3,39 +3,40 @@ struct polynomial{N}
     terms::Array{monomial{N},1}
 end
 
-polynomial(x::Array{T,1}) where {T<:monomial} = polynomial{N}(x)
-to_polynomial(x::T) where {T<:monomial} = polynomial([x])
-to_polynomial(x::T) where {T<:symmetric_polynomial} = to_polynomial(to_monomial(x))
+polynomial(x::Array{monomial{N},1}) where {N} = polynomial{N}(x)
+to_polynomial(x::monomial{N}) where {N} = polynomial(monomial{N}[x])
+to_polynomial(x::symmetric_polynomial{N}) where {N} = to_polynomial(to_monomial(x))
 
-function simplify_monomial_array(arr::Array{T,1}) where T<:monomial
+function simplify_monomial_array(arr::Array{monomial{N},1}) where {N}
     length(arr) <= 1 && return arr
     tmp = sort(arr)
     result = [tmp[1]]
     for i in tmp[2:end]
         if summable(i,result[end])
             result[end] += i
+        elseif result[end].coeff == 0
+            result[end] = i
         else
             push!(result,i)
         end
     end
-    return result[findall(t->t.coeff!=0,result)]
+    result[end].coeff == 0 && pop!(result)
+    return result
 end
 
-Base.:+(x::T,y::T) where {T<:polynomial} = polynomial(simplify_monomial_array(cat(x.terms,y.terms,dims=1)))
-Base.:-(x::T) where {T<:polynomial} = polynomial(.-x.terms)
-Base.:-(x::T,y::T) where {T<:polynomial} = polynomial(simplify_monomial_array(cat(x.terms,.-y.terms,dims=1)))
-
-function Base.:*(x::T,y::T) where {T<:polynomial}
-    tmp = eltype(x.terms)[]
-    for i in x.terms
-        for j in y.terms
-            push!(tmp,i*j)
-        end
-    end
+function Base.:+(x::polynomial{N},y::polynomial{N}) where {N}
+    tmp = copy(x.terms)
+    append!(tmp,y.terms)
     return polynomial(simplify_monomial_array(tmp))
 end
+Base.:-(x::polynomial{N}) where {N} = polynomial(.-x.terms)
+Base.:-(x::polynomial{N},y::polynomial{N}) where {N} = x + (-y)
 
-function Base.:^(x::polynomial,y::Int64)
+Base.:*(y::polynomial{N},x::monomial{N}) where {N} = polynomial(simplify_monomial_array([x*i for i in y.terms]))
+Base.:*(x::monomial{N},y::polynomial{N}) where {N} = y * x
+Base.:*(x::polynomial{N},y::polynomial{N}) where {N} = sum([i*y for i in x.terms])
+
+function Base.:^(x::polynomial{N},y::Int64) where {N}
     y<1 && throw(DomainError("power argument should >=1"))
     if y==1
         return x
@@ -46,8 +47,5 @@ function Base.:^(x::polynomial,y::Int64)
     end
 end
 
-Base.:*(y::polynomial{N},x::monomial{N}) where {N} = y * to_polynomial(x)
-Base.:*(x::monomial{N},y::polynomial{N}) where {N} = y * to_polynomial(x)
-
-Base.:*(c::T,y::S) where {T<:Real,S<:polynomial} = polynomial(c.*y.terms)
-Base.:*(y::S,c::T) where {T<:Real,S<:polynomial} = polynomial(c.*y.terms)
+Base.:*(c::T,y::polynomial{N}) where {T<:Real,N} = polynomial(c.*y.terms)
+Base.:*(y::polynomial{N},c::T) where {T<:Real,N} = polynomial(c.*y.terms)

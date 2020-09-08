@@ -1,13 +1,15 @@
 
+"""
+generates all unique orderings or m 1s and n 0s
+
+For Example, m=2 and n=2
+1100,1010,1001,0110,0101,0011
+
+"""
 function ordering_m1_n0(m,n)
-    #generates all unique orderings or m 1s and n 0s
-    #=
-    For Example, 2 1s and 2 0s
-    1100,1010,1001,0110,0101,0011
-    =#
     #base case
     if m<=n<=0
-        return []
+        return Array{Int64,1}[]
     elseif m<=0 && n>=1
         return [zeros(Int64,n)]
     elseif m>=1 && n<=0
@@ -27,6 +29,7 @@ function ordering_m1_n0(m,n)
         return tmp0
     end
 end
+add_tuple_array(x::NTuple{N,T},y) where {N,T<:Any} = ntuple(i->x[i]+y[i],N)
 
 function get_valid_exponents(dim,rank)
     tmp = integer_partitions(rank)
