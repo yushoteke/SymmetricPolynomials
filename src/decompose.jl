@@ -38,8 +38,15 @@ tables = Dict{Int64,Dict}()
 for i=1:20
     tables[i] = Dict{symmetric_polynomial{i},polynomial{i}}()
 end
+function decompose(x,T=tables)
+    N = dim(x)
+    if !haskey(T,N)
+        T[N] = Dict{symmetric_polynomial{N},polynomial{N}}()
+    end
+    return decompose_(x,T[N])
+end
 
-function decompose_symmetric_polynomial(x::symmetric_polynomial{N},decompose_table:: Dict{symmetric_polynomial{N},polynomial{N}}) where {N}
+function decompose_(x::symmetric_polynomial{N},decompose_table:: Dict{symmetric_polynomial{N},polynomial{N}}) where {N}
     is_elementary(x) && return to_polynomial(x)
     haskey(decompose_table,x) && return decompose_table[x]
     num_same_as_largest = N - findfirst(i->i==x.exponents[end],x.exponents) + 1
@@ -53,10 +60,10 @@ function decompose_symmetric_polynomial(x::symmetric_polynomial{N},decompose_tab
     similar_term = initial_guess.terms[ind]
     c = similar_term.coeff
     rewrite_x = (G-initial_guess+to_polynomial(similar_term))*(1/c)
-    solution = decompose_polynomial(rewrite_x,decompose_table)
+    solution = decompose_(rewrite_x,decompose_table)
     decompose_table[x] = solution
     return solution
 end
 
-decompose_polynomial(x::polynomial{N},decompose_table:: Dict{symmetric_polynomial{N},polynomial{N}}) where {N} = sum(polynomial{N}[decompose_monomial(i,decompose_table) for i in x.terms])
-decompose_monomial(x::monomial{N},decompose_table:: Dict{symmetric_polynomial{N},polynomial{N}}) where {N} = x.coeff * prod(polynomial{N}[decompose_symmetric_polynomial(i[1],decompose_table)^i[2] for i in x.factors])
+decompose_(x::polynomial{N},decompose_table:: Dict{symmetric_polynomial{N},polynomial{N}}) where {N} = sum(polynomial{N}[decompose_(i,decompose_table) for i in x.terms])
+decompose_(x::monomial{N},decompose_table:: Dict{symmetric_polynomial{N},polynomial{N}}) where {N} = x.coeff * prod(polynomial{N}[decompose_(i[1],decompose_table)^i[2] for i in x.factors])

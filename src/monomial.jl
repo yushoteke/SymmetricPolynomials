@@ -5,6 +5,7 @@ struct monomial{N}
     factors::Array{Tuple{symmetric_polynomial{N},Int},1}
 end
 
+dim(x::monomial{N}) where {N} = N
 monomial(c,x::symmetric_polynomial{N}) where {N} = monomial{N}(c,[(x,1)])
 summable(x::monomial{N},y::monomial{N}) where {N} = x.factors == y.factors
 to_monomial(x::symmetric_polynomial{N}) where {N} = monomial(1//1,x)

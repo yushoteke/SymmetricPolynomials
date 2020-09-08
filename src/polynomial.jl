@@ -3,6 +3,7 @@ struct polynomial{N}
     terms::Array{monomial{N},1}
 end
 
+dim(x::polynomial{N}) where {N} = N
 polynomial(x::Array{monomial{N},1}) where {N} = polynomial{N}(x)
 to_polynomial(x::monomial{N}) where {N} = polynomial(monomial{N}[x])
 to_polynomial(x::symmetric_polynomial{N}) where {N} = to_polynomial(to_monomial(x))
