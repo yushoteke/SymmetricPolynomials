@@ -1,12 +1,33 @@
+include("elementary polynomial.jl")
+include("monomial.jl")
+include("utilities.jl")
 
-function multiply_two_elementary(x::symmetric_polynomial{N},y::symmetric_polynomial{N}) where {N}
-    x1,y1 = sum(x.exponents),sum(y.exponents)
+function simplify_sp_coeff_array(x)
+    length(x) <= 1 && return x
+    sorted = sort(x)
+    tmp = eltype(x)[sorted[1]]
+    for (i,x) in enumerate(sorted[2:end])
+        if mergable(tmp[end][1],x[1])
+            tmp[end] = (tmp[end][1],tmp[end][2]+x[2])
+        else
+            if tmp[end][2] == 0
+                tmp[end] = x
+            else
+                push!(tmp,x)
+            end
+        end
+    end
+    return tmp
+end
+
+function multiply_two_elementary(x,y)
+    x1,y1 = num_highest(x),num_highest(y)
     x1 < y1 && return multiply_two_elementary(y,x)
+    N = dim(x)
     x0,y0 = N-x1,N-y1
 
-    terms = monomial{N}[]
+    terms = Tuple{symmetric_polynomial{N},Rational{Int}}[]
     for num2 = max(y1-x0,0):y1
-        c = binomial(y1+x1-2num2,y1-num2)
         num0 = x0 - (y1 - num2)
         tmp = ntuple(i->(if i>N-num2
                             return 2
@@ -15,55 +36,86 @@ function multiply_two_elementary(x::symmetric_polynomial{N},y::symmetric_polynom
                         else
                             return 0
                         end),N)
-        push!(terms,monomial(c,symmetric_polynomial(tmp...)))
+        #tmp = tuple(zeros(Int,num0)...,ones(Int,num1)...,2*ones(Int,num2)...)
+        push!(terms,(symmetric_polynomial(tmp),binomial(y1+x1-2num2,y1-num2)))
     end
-    return polynomial(terms)
+    return simplify_sp_coeff_array(terms)
 end
 
-function multiply_one_elementary(x::symmetric_polynomial{N},y::symmetric_polynomial{N}) where {N}
+#=
+function multiply_one_elementary(x,y)
     #suppose y is elementary
-    terms = monomial{N}[]
-    y1 = sum(y.exponents)
+    N = dim(x)
+    terms = Tuple{symmetric_polynomial{N},Rational{Int64}}[]
+    y1 = num_highest(y)
     y0 = N - y1
     c = symmetry_factor(x.exponents)
-    for order in ordering_m1_n0(y1,y0)
-        tmp = symmetric_polynomial(add_tuple_array(x.exponents,order)...)
-        #push!(terms,to_monomial(tmp) * (symmetry_factor(tmp.exponents)//c))
-        push!(terms,monomial(symmetry_factor(tmp.exponents)//c,tmp))
+    orders = ordering_m1_n0(y1,y0)
+    for i = 1:size(orders,1)
+        sp = symmetric_polynomial(add_tuple_array(x.exponents,orders[i,:])...)
+        coeff = symmetry_factor(sp.exponents)//c
+        push!(terms,(sp,coeff))
     end
-    return polynomial(simplify_monomial_array(terms))
+    return simplify_sp_coeff_array(terms)
+end
+=#
+
+function multiply_one_elementary(x,y)
+    N = dim(x)
+    terms = Tuple{symmetric_polynomial{N},Rational{Int64}}[]
+    y1 = num_highest(y)
+    y0 = N - y1
+    c = symmetry_factor(x.exponents)
+
+    container_sizes = [1]
+    for i=2:N
+        if x.exponents[i]==x.exponents[i-1]
+            container_sizes[end] += 1
+        else
+            push!(container_sizes,1)
+        end
+    end
+    distribution_ways = ways_place_containers(container_sizes,y1)
+    for way in distribution_ways
+        representative = canonical_placement(container_sizes,way)
+        sp = symmetric_polynomial((x.exponents.+representative)...)
+        coeff = symmetry_factor(sp.exponents) * prod([binomial(container_sizes[i],way[i]) for i=1:length(way)]) // c
+        push!(terms,(sp,coeff))
+    end
+    return simplify_sp_coeff_array(terms)
 end
 
 tables = Dict{Int64,Dict}()
 for i=1:20
-    tables[i] = Dict{symmetric_polynomial{i},polynomial{i}}()
+    tables[i] = Dict{symmetric_polynomial{i},elementary_polynomial{i}}()
 end
-function decompose(x,T=tables)
-    N = dim(x)
-    if !haskey(T,N)
-        T[N] = Dict{symmetric_polynomial{N},polynomial{N}}()
+
+decompose(x::symmetric_polynomial{N},solution_table=tables) where {N} = decompose_(x,tables[N])
+
+
+function decompose_(x::symmetric_polynomial{N},solution_table:: Dict{symmetric_polynomial{N},elementary_polynomial{N}}) where {N}
+    if is_elementary(x)
+        tmp = elementary_symmetric_polynomial(N,sum(x.exponents))
+        return convert(elementary_polynomial{N},tmp)
     end
-    return decompose_(x,T[N])
-end
+    haskey(solution_table,x) && return solution_table[x]
 
-function decompose_(x::symmetric_polynomial{N},decompose_table:: Dict{symmetric_polynomial{N},polynomial{N}}) where {N}
-    is_elementary(x) && return to_polynomial(x)
-    haskey(decompose_table,x) && return decompose_table[x]
-    num_same_as_largest = N - findfirst(i->i==x.exponents[end],x.exponents) + 1
-    factor1 = ntuple(i->i > N - num_same_as_largest ? 1 : 0,N)
+    num_high = num_highest(x)
+    factor1 = ntuple(i->i > N - num_high ? 1 : 0,N)
     factor2 = x.exponents .- factor1
-    sp1 = symmetric_polynomial(factor1...)
+    sp1 = elementary_symmetric_polynomial(N,num_high)
     sp2 = symmetric_polynomial(factor2...)
-    initial_guess = is_elementary(sp2) ? multiply_two_elementary(sp2,sp1) :  multiply_one_elementary(sp2,sp1)
-    G = to_polynomial(to_monomial(sp1)*to_monomial(sp2))
-    ind = findfirst(t->summable(to_monomial(x),t),initial_guess.terms)
-    similar_term = initial_guess.terms[ind]
-    c = similar_term.coeff
-    rewrite_x = (G-initial_guess+to_polynomial(similar_term))*(1/c)
-    solution = decompose_(rewrite_x,decompose_table)
-    decompose_table[x] = solution
-    return solution
+    initial_terms = is_elementary(sp2) ? multiply_two_elementary(sp2,sp1) :  multiply_one_elementary(sp2,sp1)
+    solution = decompose_(sp2,solution_table) * sp1
+    coef = 0
+    for sp in initial_terms
+        if !mergable(x,sp[1])
+            solution -= sp[2] * decompose_(sp[1],solution_table)
+        else
+            coef = sp[2]
+        end
+    end
+    solution /= coef
+    solution_table[x] = solution
+    return solution::elementary_polynomial{N}
 end
-
-decompose_(x::polynomial{N},decompose_table:: Dict{symmetric_polynomial{N},polynomial{N}}) where {N} = sum(polynomial{N}[decompose_(i,decompose_table) for i in x.terms])
-decompose_(x::monomial{N},decompose_table:: Dict{symmetric_polynomial{N},polynomial{N}}) where {N} = x.coeff * prod(polynomial{N}[decompose_(i[1],decompose_table)^i[2] for i in x.factors])
