@@ -4,15 +4,10 @@ using Combinatorics
 using TupleTools
 using DataStructures
 
-export symmetric_polynomial,decompose
+export semi_elementary_monomial,decompose
 
-include("elementary symmetric polynomial.jl")
-include("elementary monomial.jl")
-include("elementary polynomial.jl")
-include("symmetric polynomial.jl")
-include("monomial.jl")
 include("utilities.jl")
-include("decompose.jl")
-
+include("semi elementary monomial.jl")
+include("semi elementary polynomial.jl")
 
 end

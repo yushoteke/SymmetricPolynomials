@@ -1,33 +1,4 @@
-#=
-function ordering_m1_n0(m,n)
-    #generates all unique orderings or m 1s and n 0s
-    #=
-    For Example, 2 1s and 2 0s
-    1100,1010,1001,0110,0101,0011
-    =#
-    #base case
-    if m<=n<=0
-        return Array{Int64,1}[]
-    elseif m<=0 && n>=1
-        return [zeros(Int64,n)]
-    elseif m>=1 && n<=0
-        return [ones(Int64,m)]
-    else    #both m,n>=1
-        #assume first entry is 0
-        tmp0 = ordering_m1_n0(m,n-1)
-        for i in tmp0
-            pushfirst!(i,0)
-        end
-        #assume first entry is 1
-        tmp1 = ordering_m1_n0(m-1,n)
-        for i in tmp1
-            pushfirst!(i,1)
-        end
-        append!(tmp0,tmp1)
-        return tmp0
-    end
-end
-=#
+
 function ordering_m1_n0(m,n)
     arr = zeros(Int,binomial(m+n,m),m+n)
     set_1s_0s(arr,1,1,m+n,m,n)
@@ -78,7 +49,7 @@ function canonical_placement(x,y)
 end
 
 add_tuple_array(x::NTuple{N,T},y) where {N,T<:Any} = ntuple(i->x[i]+y[i],N)
-
+sorttuple(x::NTuple) = length(x)<10 ? TupleTools.sort(x) : tuple(sort([x...])...)
 
 function get_valid_exponents(dim,rank)
     tmp = integer_partitions(rank)
@@ -93,42 +64,25 @@ function get_valid_exponents(dim,rank)
     return tmp
 end
 
-function symmetry_factor(exponents)
-    tmp = counter(exponents)
-    return prod(factorial.(values(tmp)))
-end
-
-elementary_symmetric_polynomial_to_string(x::elementary_symmetric_polynomial) = "e"*string(x.order)
-function elementary_monomial_to_string(x::elementary_monomial)
-    head = x.coeff>0 ? "  +" : "  -"
-    head *= x.coeff.den == 1 ? string(abs(x.coeff.num)) : string(abs(x.coeff))
-    head *= "*"
-    for (i,n) in enumerate(x.exponents)
-        if n == 0
-            continue
-        elseif n == 1
-            head *= "e$i "
+function count_occurrences(x)
+    #count number of each item in a sorted array
+    #for example, [3,3,3,3,3,4,4,5] -> [5,2,1]
+    container_sizes = [1]
+    for i=2:length(x)
+        if x[i]==x[i-1]
+            container_sizes[end] += 1
         else
-            head *= "e$i^$n "
+            push!(container_sizes,1)
         end
     end
-    return head
+    return container_sizes
 end
-elementary_polynomial_to_string(x::elementary_polynomial) = prod([elementary_monomial_to_string(i) for i in x.terms])
 
-Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::elementary_polynomial) = join(io,elementary_polynomial_to_string(x))
-#=
-symmetric_polynomial_to_string(s::symmetric_polynomial) = is_elementary(s) ? "e"*string(sum(s.exponents)) : "S"*string(s.exponents)
-function monomial_to_string(x::monomial)
-    head = x.coeff>0 ? "  + " : "  - "
-    head *= x.coeff.den == 1 ? string(abs(x.coeff.num)) : string(abs(x.coeff))
-    for (s,e) in x.factors
-        head *= " * "
-        head *= e == 1 ? symmetric_polynomial_to_string(s) : symmetric_polynomial_to_string(s)*"^$e"
-    end
-    return head
+function symmetry_factor(exponents)
+    occur = count_occurrences(exponents)
+    return prod(factorial.(occur))
 end
-polynomial_to_string(x::polynomial) = prod([monomial_to_string(i) for i in x.terms])
 
-Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::polynomial) = join(io,polynomial_to_string(x))
-=#
+#converts an term to elementary representation
+#for example, (0,1,1) -> (0,1,0),(0,0,1) -> (1,0,0), (1,1,1)->(0,0,1)
+elementary_representation(x::NTuple) = ntuple(i->i==sum(x) ? 1 : 0,length(x))
