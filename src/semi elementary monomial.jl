@@ -65,6 +65,8 @@ struct semi_elementary_monomial{N}
     powers::NTuple{N,Int64}
 
     function semi_elementary_monomial(x,y)
+        (length(x) != length(y)) && throw(DimensionMismatch("Input tuples should have same length"))
+        (any(i->i<0,x) || any(i->i<0,y)) && throw(DomainError("all entries must be greater than 0"))
         x = sorttuple(x)
         N = length(x)
         if x[1]!=0
@@ -81,6 +83,7 @@ end
 
 dim(x::semi_elementary_monomial{N}) where {N} = N
 is_elementary(x::semi_elementary_monomial) = x.sp_term[end]==0
+Base.:(==)(x::semi_elementary_monomial,y::semi_elementary_monomial) = (x.sp_term==y.sp_term) && (x.powers==y.powers)
 function Base.isless(x::semi_elementary_monomial{N},y::semi_elementary_monomial{N}) where {N}
     for i=N:-1:1
         x.sp_term[i] != y.sp_term[i] && return x.sp_term[i] < y.sp_term[i]
@@ -88,7 +91,7 @@ function Base.isless(x::semi_elementary_monomial{N},y::semi_elementary_monomial{
     return x.powers < y.powers
 end
 
-function semi_elementary_monomial_to_string(x::semi_elementary_monomial)
+function to_string(x::semi_elementary_monomial)
     if !is_elementary(x)
         head = "S"*string(x.sp_term)
     else
@@ -105,4 +108,4 @@ function semi_elementary_monomial_to_string(x::semi_elementary_monomial)
     end
     return head
 end
-Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::semi_elementary_monomial) = join(io,semi_elementary_monomial_to_string(x))
+Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::semi_elementary_monomial) = join(io,to_string(x))
