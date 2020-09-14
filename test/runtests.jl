@@ -1,6 +1,8 @@
 using SymmetricPolynomials
 using Test
+import SymmetricPolynomials: semi_elementary_polynomial,push!
 
-@testset "SymmetricPolynomials.jl" begin
-    # Write your tests here.
+
+@testset "Decompose Elementary Symmetric Polynomials" begin
+    include("decomposeTests.jl")
 end
