@@ -11,9 +11,6 @@ struct semi_elementary_polynomial{N}
 
 end
 
-
-include("utilities.jl")
-
 function to_polynomial(x::semi_elementary_monomial)
     k = semi_elementary_polynomial(dim(x))
     k.terms[x]=1
@@ -29,6 +26,8 @@ function Base.push!(x::semi_elementary_polynomial{N},k::semi_elementary_monomial
         pop!(x.terms,k)
     end
 end
+
+Base.:(==)(x::semi_elementary_polynomial,y::semi_elementary_polynomial) = x.terms == y.terms
 
 function muladd!(x::semi_elementary_polynomial{N},y::semi_elementary_polynomial{N},c::Union{Integer,Rational}) where {N}
     for (i,j) in y.terms
