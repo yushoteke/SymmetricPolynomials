@@ -88,7 +88,9 @@ function Base.isless(x::semi_elementary_monomial{N},y::semi_elementary_monomial{
     for i=N:-1:1
         x.sp_term[i] != y.sp_term[i] && return x.sp_term[i] < y.sp_term[i]
     end
-    return x.powers < y.powers
+    s1,s2 = sum(x.powers),sum(y.powers)
+    return s1!=s2 ? s1 < s2 : x.powers < y.powers
+    #return x.powers < y.powers
 end
 
 function to_string(x::semi_elementary_monomial)

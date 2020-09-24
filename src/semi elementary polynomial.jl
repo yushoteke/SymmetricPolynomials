@@ -89,14 +89,14 @@ function decompose(x::semi_elementary_monomial{N}) where {N}
 end
 
 
-function semi_elementary_polynomial_to_string(x::semi_elementary_polynomial)
+function to_string(x::semi_elementary_polynomial)
     head = ""
     for (i,j) in x.terms
         head *= j>0 ? " +" : " -"
         head *= j.den==1 ? string(abs(j.num)) : string(abs(j))
         head *= "*"
-        head *= semi_elementary_monomial_to_string(i)
+        head *= to_string(i)
     end
     return head
 end
-Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::semi_elementary_polynomial) = join(io,semi_elementary_polynomial_to_string(x))
+Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::semi_elementary_polynomial) = join(io,to_string(x))
