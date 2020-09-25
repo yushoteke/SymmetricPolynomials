@@ -66,7 +66,7 @@ struct semi_elementary_monomial{N}
 
     function semi_elementary_monomial(x,y)
         (length(x) != length(y)) && throw(DimensionMismatch("Input tuples should have same length"))
-        (any(i->i<0,x) || any(i->i<0,y)) && throw(DomainError("all entries must be greater than 0"))
+        #(any(i->i<0,x) || any(i->i<0,y)) && throw(DomainError("all entries must be greater than 0"))
         x = sorttuple(x)
         N = length(x)
         if x[1]!=0

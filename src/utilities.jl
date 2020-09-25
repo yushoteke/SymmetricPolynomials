@@ -85,4 +85,4 @@ end
 
 #converts an term to elementary representation
 #for example, (0,1,1) -> (0,1,0),(0,0,1) -> (1,0,0), (1,1,1)->(0,0,1)
-elementary_representation(x::NTuple) = ntuple(i->i==sum(x) ? 1 : 0,length(x))
+(elementary_representation(x::NTuple{N,T})::NTuple{N,T}) where {N,T}  = ntuple(i->i==sum(x) ? one(T) : zero(T),N)
