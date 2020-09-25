@@ -1,11 +1,5 @@
 
 @testset "Basic Monomial Functionalities" begin
-    @testset "invalid arguments 1" begin
-        @test_throws DomainError semi_elementary_monomial((-1,0,0),(0,0,0))
-        @test_throws DomainError semi_elementary_monomial((0,0,0),(-1,0,0))
-        @test_throws DimensionMismatch semi_elementary_monomial((0,0,0),(0,0,0,0))
-        @test_throws DimensionMismatch semi_elementary_monomial((0,0,0,0),(0,0,0))
-    end
 
     @testset "automatic sorting" begin
         x = semi_elementary_monomial((3,2,1),(1,0,0))
@@ -47,9 +41,9 @@
         x = semi_elementary_monomial((3,3,3),(0,0,0))
         @test is_elementary(x) == true
         x = semi_elementary_monomial((1,0,0),(0,0,0))
-        @test is_elementary(x) ==false
+        @test is_elementary(x) == true
         x = semi_elementary_monomial((0,0,1),(0,0,0))
-        @test is_elementary(x) ==false
+        @test is_elementary(x) == true
     end
 
     @testset "test dim" begin
