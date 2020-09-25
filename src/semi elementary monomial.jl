@@ -64,22 +64,30 @@ struct semi_elementary_monomial{N}
     sp_term::NTuple{N,Int64}
     powers::NTuple{N,Int64}
 
-    function semi_elementary_monomial(x,y)
-        (length(x) != length(y)) && throw(DimensionMismatch("Input tuples should have same length"))
-        #(any(i->i<0,x) || any(i->i<0,y)) && throw(DomainError("all entries must be greater than 0"))
-        x = sorttuple(x)
-        N = length(x)
-        if x[1]!=0
-            #automatically factors out e_n terms like xyz relative to x+y+z and xy+xz+yz
-            #after that, check if the remaining is elementary
-            x,y = x .- x[1],ntuple(i->i==N ? x[1]+y[i] : y[i],N)
-            if x[end]==1
-                x,y =ntuple(i->0,N), y .+ elementary_representation(x)
-            end
+    function semi_elementary_monomial(x::NTuple{N,Int64},y::NTuple{N,Int64}) where {N}
+        t = TupleTools.sort(x)
+        if t[end] - t[1] == 1
+            c = sum(t) - N * t[1]
+            tmp2 = ntuple(N) do i
+                    if i==c
+                        return y[i] + 1
+                    elseif i==N
+                        return y[i] + t[1]
+                    else
+                        return y[i]
+                    end
+                end
+            tmp1 = ntuple(i->0,N)
+        elseif t[1] > 0
+            tmp2 = ntuple(i->i==N ? y[i]+t[1] : y[i],N)
+            tmp1 = t .- t[1]
+        else
+            tmp1,tmp2 = t,y
         end
-        return new{N}(x,y)
+        return new{N}(tmp1,tmp2)
     end
 end
+
 
 dim(x::semi_elementary_monomial{N}) where {N} = N
 is_elementary(x::semi_elementary_monomial) = x.sp_term[end]==0

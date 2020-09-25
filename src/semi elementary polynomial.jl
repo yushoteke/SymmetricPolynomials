@@ -3,8 +3,8 @@ struct semi_elementary_polynomial{N}
     semi_elementary_polynomial(N) = new{N}(SortedDict{semi_elementary_monomial{N},Int64}())
 end
 
-function to_polynomial(x::semi_elementary_monomial)
-    k = semi_elementary_polynomial(dim(x))
+function to_polynomial(x::semi_elementary_monomial{N}) where {N}
+    k = semi_elementary_polynomial(N)
     k.terms[x]=1
     return k
 end
@@ -25,45 +25,29 @@ function lower_order_representation(polynomial::semi_elementary_polynomial{N},x:
     is_elementary(x) && return
     sp = x.sp_term
     original_coefficient = polynomial.terms[x]
-    Z = ntuple(i->0,N)
     num_highest = N - findfirst(i->i==sp[end],sp) + 1
-    factor1 = ntuple(i->i > N - num_highest ? 1 : 0,N)
-    factor2 = sp .- factor1
+    factor = ntuple(i->i > N - num_highest ? sp[i] - 1 : sp[i],N)
 
-    f2_containers = counter(factor2)
-    f2_keys = sort(collect(keys(f2_containers)))
-    f2_values = map(i->f2_containers[i],f2_keys)
-    distribution_ways = ways_place_containers(f2_values,num_highest)
+    f_containers = counter(factor)
+    f_keys = sort(collect(keys(f_containers)))
+    f_values = map(i->f_containers[i],f_keys)
+    distribution_ways = ways_place_containers(f_values,num_highest)
 
     for way in distribution_ways
-        representative = canonical_placement(f2_values,way)
-        new_term = sorttuple(add_tuple_array(factor2,representative))
+        representative = canonical_placement(f_values,way)
+        new_term = TupleTools.sort(ntuple(i->factor[i] + representative[i],N))
         coeff = 1
-        for i=2:length(f2_keys)
-            if f2_keys[i-1]==f2_keys[i]-1
-                coeff *= binomial(f2_values[i]-way[i]+way[i-1],way[i-1])
+        for i=2:length(f_keys)
+            if f_keys[i-1]==f_keys[i]-1
+                coeff *= binomial(f_values[i] - way[i] + way[i-1],way[i-1])
             end
         end
-        #=
-        if new_term[end]!=1
-            new_monomial = semi_elementary_monomial(new_term,x.powers)
-        else
-            tmp1::NTuple{N,eltype(factor2)} = elementary_representation(new_term)
-            new_monomial = semi_elementary_monomial(Z,tmp1.+x.powers)
-        end
-        =#
-        new_monomial::semi_elementary_monomial{N} = new_term[end]!=1 ?
-                semi_elementary_monomial(new_term,x.powers) : semi_elementary_monomial(Z,elementary_representation(new_term).+x.powers)
-                                                
-        push!(polynomial,new_monomial,-coeff * original_coefficient)
+        push!(polynomial,semi_elementary_monomial(new_term,x.powers),-coeff * original_coefficient)
     end
-    if factor2[end]==1
-        tmp::NTuple{N,eltype(factor2)} = elementary_representation(factor1) .+ elementary_representation(factor2) .+ x.powers
-        push!(polynomial,semi_elementary_monomial(Z,tmp),original_coefficient)
-    else
-        push!(polynomial,semi_elementary_monomial(factor2,elementary_representation(factor1).+x.powers),original_coefficient)
-    end
+    tmp = ntuple(i->i==num_highest ? x.powers[i] + 1 : x.powers[i],N)
+    push!(polynomial,semi_elementary_monomial(factor,tmp),original_coefficient)
 end
+
 
 function decompose(x::semi_elementary_monomial{N}) where {N}
     polynomial = semi_elementary_polynomial(N)
