@@ -1,7 +1,7 @@
 name = "SymmetricPolynomials"
 uuid = "558b8e20-7ada-43ad-ad6f-3f1590d8955d"
 authors = ["David Yang"]
-version = "0.1.2"
+version = "0.2.0"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"

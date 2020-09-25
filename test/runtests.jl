@@ -14,3 +14,7 @@ end
 @testset "Decompose" begin
     include("decomposeTests.jl")
 end
+
+@testset "Evaluate" begin
+    include("evaluateTests.jl")
+end
