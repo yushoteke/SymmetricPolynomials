@@ -27,9 +27,28 @@ function canonical_placement(x,y)
     #returns one way this could have happened.
     #For example, x=[1,2,6],y=[1,1,2] could be 1|10|010100 or 1|01|110000
     tmp = zeros(Int,sum(x))
-    starting_locations = cumsum([1,x...])
-    for (i,x) in enumerate(starting_locations[1:end-1])
-        tmp[x:x-1+y[i]] .= 1
+    ind = 1
+    for i = 1:length(x)
+        tmp[ind:ind+y[i]-1] .= 1
+        ind += x[i]
     end
     return tmp
+end
+
+function count_occurrences(factor)
+    #assume factor is a sorted tuple like (0,0,0,1,1,3,3)
+    #returns two arrays, the first one keys, the second one
+    #number of occurrences, like for this case,
+    #[0,1,3],[3,2,2]
+    x = [factor[1]]
+    y = [1]
+    for i=2:length(factor)
+        if factor[i] == factor[i-1]
+            y[end] += 1
+        else
+            push!(x,factor[i])
+            push!(y,1)
+        end
+    end
+    return x,y
 end
