@@ -1,6 +1,6 @@
 struct semi_elementary_polynomial{N}
-    terms::SortedDict{semi_elementary_monomial{N},Int64,Base.Order.ForwardOrdering}
-    semi_elementary_polynomial(N) = new{N}(SortedDict{semi_elementary_monomial{N},Int64}())
+    terms::SortedDict{semi_elementary_monomial{N},Int128,Base.Order.ForwardOrdering}
+    semi_elementary_polynomial(N) = new{N}(SortedDict{semi_elementary_monomial{N},Int128}())
 end
 
 function to_polynomial(x::semi_elementary_monomial{N}) where {N}
@@ -28,12 +28,11 @@ function lower_order_representation(polynomial::semi_elementary_polynomial{N},x:
     num_highest = N - findfirst(i->i==sp[end],sp) + 1
     factor = ntuple(i->i > N - num_highest ? sp[i] - 1 : sp[i],N)
 
-    f_containers = counter(factor)
-    f_keys = sort(collect(keys(f_containers)))
-    f_values = map(i->f_containers[i],f_keys)
+    f_keys,f_values = count_occurrences(factor)
     distribution_ways = ways_place_containers(f_values,num_highest)
 
-    for way in distribution_ways
+    for j=1:size(distribution_ways,1)
+        way = view(distribution_ways,j,:)
         representative = canonical_placement(f_values,way)
         new_term = TupleTools.sort(ntuple(i->factor[i] + representative[i],N))
         coeff = 1
