@@ -1,6 +1,5 @@
 module SymmetricPolynomials
 
-using Combinatorics
 using TupleTools
 using DataStructures
 
