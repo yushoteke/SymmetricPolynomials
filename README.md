@@ -1,4 +1,4 @@
-# SymmetricPolynomials
+# SymmetricPolynomials.jl
 
 ### Installation
 To install, type in the repl
