@@ -2,32 +2,55 @@
 """
     semi_elementary_monomial(x,y)
 
-First, given n variables, we say e_i is the elementary symmetric polynomial or order i with coefficient 1.\n
-For example,\n
-    n=3, e1 = x+y+z,    e2 = xy+xz+yz,          e3 = xyz
-    n=4, e1 = w+x+y+z,  e2 = wx+wy+wz+xy+xz+yz, e3 = wxy+wxz+wyz+xyz, e4 = wxyz
-    ...
-    and so on
+First, given ``n`` variables, we say ``e_i`` is the elementary symmetric polynomial or order i with coefficient 1.\n
+For example, when ``n=3``,
 
-Second, S(a1,a2...an) is the symmetric polynomial in n variables with powers 0 <= a1 <= a2...<= an and coefficient 1\n
-For example,\n
-    S(0,1,2) = x^2y + x^2z + y^2z
-    S(0,0,1,2) = w^2x + w^2y + w^2z + x^2y + x^2z + y^2z
-    S(0,0,0,0,4) = v^5 + w^5 + x^5 + y^5 + z^5
-    ...
-    and so on
+``e_1 = x+y+z``
+
+``e_2 = xy+xz+yz``
+
+``e_3 = xyz``
+
+When ``n=4``,
+
+``e_1 = w+x+y+z``
+
+``e_2 = wx+wy+wz+xy+xz+yz``
+
+``e_3 = wxy+wxz+wyz+xyz``
+
+``e_4 = wxyz``
+
+and so on
+
+From the users perspective, usually the ``n`` is obvious, so it is omitted.
+
+Then, ``S(a_1,a_2...a_n)`` is the symmetric polynomial in ``n`` variables with powers ``0 \\leq a_1 \\leq a_2...\\leq a_n`` and coefficient 1\n
+For example,
+
+``S(0,1,2) = x^2y + x^2z + y^2z``
+
+``S(0,0,1,2) = w^2x + w^2y + w^2z + x^2y + x^2z + y^2z``
+
+``S(0,0,0,0,5) = v^5 + w^5 + x^5 + y^5 + z^5``
+
+and so on
 
 A semi elementary monomial is the product of\n
-    1.a non elementary symmetric polynomial with power 1
-    2.an elementary monomial
+    1. A non elementary symmetric polynomial with power 1
+    2. An elementary monomial
 
-For example,\n
-    S(0,0,3) * e1^3 * e2^1 * e3^0            = (x^3 + y^3 + z^3) * (x + y + z)^3 * (xy + xz + yz)
-    S(0,0,1,2) * e1^3 * e2^0 * e3^1 * e4^2   = (w^2x + w^2y + w^2z + x^2y + x^2z + y^2z) * (w + x + y + z)^3 * (wxy + wxz + wyz + xyz) * (wxyz)^2
+For example, the follow are semi elementary
 
-These would be represented as two tuples, for example\n
-    S(0,0,3) * e1^3 * e2^1 * e3^0           => (0,0,3),(3,1,0)
-    S(0,0,1,2) * e1^3 * e2^0 * e3^1 * e4^2  => (0,0,1,2),(3,0,1,2)
+``S(0,0,3)e_1^3e_2^1e_3^0``
+
+``S(0,0,1,2)e_1^3e_2^0e_3^1e_4^2``
+
+These would be represented as two tuples,
+
+``S(0,0,3)e_1^3e_2^1e_3^0           => (0,0,3),(3,1,0)``
+
+``S(0,0,1,2)e_1^3e_2^0e_3^1e_4^2  => (0,0,1,2),(3,0,1,2)``
 
 This is where the name semi comes from, in that nearly all terms in the monomial are elementary except 1.
 
@@ -41,7 +64,7 @@ returns the same object as
     semi_elementary_monomial((0,1,2),(3,4,5))
 
 Besides sorting, some trivial simplifications will also be made.
-First, e_n terms will be automatically pulled out, for example
+First, ``e_n`` terms will be automatically pulled out, for example
 
     semi_elementary_monomial((2,3,4),(0,0,0))
 
@@ -50,7 +73,8 @@ will return
     semi_elementary_monomial((0,1,2),(0,0,2))
 
 Which is basically saying
-    (x^2y^3z^4 + x^2z^3y^4 + y^2x^3z^4 + y^2z^3x^4 + z^2x^3y^4 + z^2x^4y^3) = (x^2y + x^2z + y^2z) * (xyz)^2
+
+``(x^2y^3z^4 + x^2z^3y^4 + y^2x^3z^4 + y^2z^3x^4 + z^2x^3y^4 + z^2x^4y^3) = (x^2y + x^2z + y^2z) * (xyz)^2``
 
 Second, if the first term is already elementary, it will be merged into the second term, for example
 

@@ -1,5 +1,10 @@
 
 """
+    ways_place_containers(x,m)
+
+Given containers of sizes x, and m balls, enumerate all the ways to place the balls
+into the containers without violating the constraints.
+
 Lets illustrate this function through an example. Suppose we want to find
 all the ways to place 4 balls into 4 containers with capacities [2,1,3,4]
 
@@ -25,6 +30,8 @@ m  e|   1   2   3   4
 2   |   1   2   5   9
 3   |   0   1   6   15
 4   |   0   0   5   20
+
+Then we could use this table to build the actual solutions with another builder function.
 """
 function ways_place_containers(x,m)
     #assume x=[x_1,x_2,x_3...x_n] respresents n containers each with
@@ -70,7 +77,21 @@ function table_builder!(output,solution_table,container_sizes,row,col,balls_left
     end
 end
 
+"""
+    canonical_placement(x,y)
 
+Given containers of size x, and number of balls to place into each container y,
+return the placement as a tuple of 1s and 0s.
+
+Example:
+
+canonical_placement([2,3,4],[1,1,1]) returns
+
+(1,0,1,0,0,1,0,0,0)
+
+Which one could think of as 10|100|1000
+
+"""
 function canonical_placement(x,y)
     #assume x=[x_1,x_2,x_3...x_n] respresents n containers each with positive capacity x_i.
     #assume y=[y_1,y_2,y_3...y_n] means placed 0<=y_i<=x_i balls into container i

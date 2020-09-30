@@ -1,0 +1,3 @@
+# SymmetricPolynomials.jl Documentation
+
+## Introduction
