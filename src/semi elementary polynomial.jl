@@ -12,21 +12,21 @@ end
 
 function to_polynomial(x::semi_elementary_monomial{N}) where {N}
     k = semi_elementary_polynomial(N)
-    k.terms[x]=1
+    k.terms[x] = 1
     return k
 end
 
-function Base.push!(x::semi_elementary_polynomial{N},k::semi_elementary_monomial{N},v::Union{Integer,Rational}) where {N}
-    if !haskey(x.terms,k)
+function Base.push!(x::semi_elementary_polynomial{N}, k::semi_elementary_monomial{N}, v::Union{Integer,Rational}) where {N}
+    if !haskey(x.terms, k)
         x.terms[k] = v
     elseif x.terms[k] != -v
         x.terms[k] += v
     else
-        pop!(x.terms,k)
+        pop!(x.terms, k)
     end
 end
 
-Base.:(==)(x::semi_elementary_polynomial,y::semi_elementary_polynomial) = x.terms == y.terms
+Base.:(==)(x::semi_elementary_polynomial, y::semi_elementary_polynomial) = x.terms == y.terms
 
 """
     lower_order_representation(p,x)
@@ -40,31 +40,30 @@ but with terms of lower order. We would take an initial guess, ``S(0,1,3)\\appro
 It turns out ``S(0,1,2)S(0,0,1)=S(0,1,3)+2S(0,2,2)+2S(1,1,1)(0,0,1)``, so if we rewrite it as
 ``S(0,1,3)=S(0,1,2)S(0,0,1)-2S(0,2,2)-2S(1,1,1)(0,0,1)`` every term has lower order.
 """
-function lower_order_representation(polynomial::semi_elementary_polynomial{N},x::semi_elementary_monomial{N}) where {N}
+function lower_order_representation(polynomial::semi_elementary_polynomial{N}, x::semi_elementary_monomial{N}) where {N}
     is_elementary(x) && return
     sp = x.sp_term
     original_coefficient = polynomial.terms[x]
-    num_highest = N - findfirst(i->i==sp[end],sp) + 1
-    factor = ntuple(i->i > N - num_highest ? sp[i] - 1 : sp[i],N)
+    num_highest = N - findfirst(i -> i == sp[end], sp) + 1
+    factor = ntuple(i -> i > N - num_highest ? sp[i] - 1 : sp[i], N)
 
-    f_keys,f_values = count_occurrences(factor)
-    distribution_ways = ways_place_contain
-push!(LOAD_PATH,"../src/")ers(f_values,num_highest)
+    f_keys, f_values = count_occurrences(factor)
+    distribution_ways = ways_place_containers(f_values, num_highest)
 
-    for j=1:size(distribution_ways,1)
-        way = view(distribution_ways,j,:)
-        representative = canonical_placement(f_values,way)
-        new_term = TupleTools.sort(ntuple(i->factor[i] + representative[i],N))
+    for j = 1:size(distribution_ways, 1)
+        way = view(distribution_ways, j, :)
+        representative = canonical_placement(f_values, way)
+        new_term = TupleTools.sort(ntuple(i -> factor[i] + representative[i], N))
         coeff = 1
-        for i=2:length(f_keys)
-            if f_keys[i-1]==f_keys[i]-1
-                coeff *= binomial(f_values[i] - way[i] + way[i-1],way[i-1])
+        for i = 2:length(f_keys)
+            if f_keys[i-1] == f_keys[i] - 1
+                coeff *= binomial(f_values[i] - way[i] + way[i-1], way[i-1])
             end
         end
-        push!(polynomial,semi_elementary_monomial(new_term,x.powers),-coeff * original_coefficient)
+        push!(polynomial, semi_elementary_monomial(new_term, x.powers), -coeff * original_coefficient)
     end
-    tmp = ntuple(i->i==num_highest ? x.powers[i] + 1 : x.powers[i],N)
-    push!(polynomial,semi_elementary_monomial(factor,tmp),original_coefficient)
+    tmp = ntuple(i -> i == num_highest ? x.powers[i] + 1 : x.powers[i], N)
+    push!(polynomial, semi_elementary_monomial(factor, tmp), original_coefficient)
 end
 
 """
@@ -85,7 +84,7 @@ function decompose(x::semi_elementary_monomial{N}) where {N}
     highest_term = last(polynomial.terms).first
     while !is_elementary(highest_term)
         #println("highest term is "*string(highest_term))
-        lower_order_representation(polynomial,highest_term)
+        lower_order_representation(polynomial, highest_term)
         highest_term = last(polynomial.terms).first
     end
     return polynomial
@@ -93,8 +92,8 @@ end
 
 function to_string(x::semi_elementary_polynomial)
     head = ""
-    for (i,j) in x.terms
-        if j>0
+    for (i, j) in x.terms
+        if j > 0
             head *= "+"
         end
         head *= string(j)
@@ -103,4 +102,89 @@ function to_string(x::semi_elementary_polynomial)
     end
     return head
 end
-Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::semi_elementary_polynomial) = join(io,to_string(x))
+Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::semi_elementary_polynomial) = join(io, to_string(x))
+
+function lower_order_representation2(polynomial::semi_elementary_polynomial{N},
+    vec::Vector{semi_elementary_monomial{N}}) where {N}
+    is_elementary(vec[1]) && return
+    sp = vec[1].sp_term
+    original_coefficients = map(x -> polynomial.terms[x], vec)
+    num_highest = N - findfirst(i -> i == sp[end], sp) + 1
+    factor = ntuple(i -> i > N - num_highest ? sp[i] - 1 : sp[i], N)
+
+    f_keys, f_values = count_occurrences(factor)
+    distribution_ways = ways_place_containers(f_values, num_highest)
+    if size(distribution_ways, 1) > 5
+        println(size(distribution_ways, 1))
+    end
+
+    for j = 1:size(distribution_ways, 1)
+        way = view(distribution_ways, j, :)
+        representative = canonical_placement(f_values, way)
+        new_term = TupleTools.sort(ntuple(i -> factor[i] + representative[i], N))
+        coeff = 1
+        for i = 2:length(f_keys)
+            if f_keys[i-1] == f_keys[i] - 1
+                coeff *= binomial(f_values[i] - way[i] + way[i-1], way[i-1])
+            end
+        end
+        for (ind, x) ∈ enumerate(vec)
+            push!(polynomial, semi_elementary_monomial(new_term, x.powers), -coeff * original_coefficients[ind])
+        end
+    end
+    for (ind, x) ∈ enumerate(vec)
+        tmp = ntuple(i -> i == num_highest ? x.powers[i] + 1 : x.powers[i], N)
+        push!(polynomial, semi_elementary_monomial(factor, tmp), original_coefficients[ind])
+    end
+end
+
+function decompose2(x::semi_elementary_monomial{N}) where {N}
+    p = semi_elementary_polynomial(N)
+    p.terms[x] = 1
+    while true
+        is_elementary(last(p.terms).first) && break
+
+        #find all semi elementary monomials whose non elementary part are same
+        highest_terms = [last(p.terms).first]
+        cur_semi_token = lastindex(p.terms)
+        while cur_semi_token != startof(p.terms)
+            cur_semi_token = regress((p.terms, cur_semi_token))
+            key = deref_key((p.terms, cur_semi_token))
+            key.sp_term == highest_terms[1].sp_term ? push!(highest_terms, key) : break
+        end
+        lower_order_representation2(p, highest_terms)
+
+    end
+    return p
+end
+
+function decompose3(x::semi_elementary_monomial{N}) where {N}
+    p = semi_elementary_polynomial(N)
+    p.terms[x] = 1
+    while true
+        is_elementary(last(p.terms).first) && break
+
+        #combines decompose2 and decompose strategies
+        st = lastindex(p.terms)
+        if st == startof(p.terms)
+            lower_order_representation(p, deref_key((p.terms, st)))
+            continue
+        end
+
+        prev_st = regress((p.terms, st))
+        if deref_key((p.terms, st)).sp_term != deref_key((p.terms, prev_st)).sp_term
+            lower_order_representation(p, deref_key((p.terms, st)))
+            continue
+        end
+
+        highest_terms = [last(p.terms).first]
+        while st != startof(p.terms)
+            st = regress((p.terms, st))
+            key = deref_key((p.terms, st))
+            key.sp_term == highest_terms[1].sp_term ? push!(highest_terms, key) : break
+        end
+        lower_order_representation2(p, highest_terms)
+
+    end
+    return p
+end
