@@ -88,50 +88,97 @@ struct semi_elementary_monomial{N}
     sp_term::NTuple{N,Int64}
     powers::NTuple{N,Int64}
 
-    function semi_elementary_monomial(x::NTuple{N,Int64},y::NTuple{N,Int64}) where {N}
+    function semi_elementary_monomial(x::NTuple{N,Int64}, y::NTuple{N,Int64}) where {N}
         t = TupleTools.sort(x)
         if t[end] - t[1] == 1
             c = sum(t) - N * t[1]
             tmp2 = ntuple(N) do i
-                    if i==c
-                        return y[i] + 1
-                    elseif i==N
-                        return y[i] + t[1]
-                    else
-                        return y[i]
-                    end
+                if i == c
+                    return y[i] + 1
+                elseif i == N
+                    return y[i] + t[1]
+                else
+                    return y[i]
                 end
-            tmp1 = ntuple(i->0,N)
+            end
+            tmp1 = ntuple(i -> 0, N)
         elseif t[1] > 0
-            tmp2 = ntuple(i->i==N ? y[i]+t[1] : y[i],N)
+            tmp2 = ntuple(i -> i == N ? y[i] + t[1] : y[i], N)
             tmp1 = t .- t[1]
         else
-            tmp1,tmp2 = t,y
+            tmp1, tmp2 = t, y
         end
-        return new{N}(tmp1,tmp2)
+        return new{N}(tmp1, tmp2)
     end
+    function semi_elementary_monomial(x::NTuple{N,Int64}, y::NTuple{N,Int64}, nosort) where {N}
+        t = nosort ? x : TupleTools.sort(x)
+        if t[end] - t[1] == 1
+            c = sum(t) - N * t[1]
+            tmp2 = ntuple(Val(N)) do i
+                if i == c
+                    return y[i] + 1
+                elseif i == N
+                    return y[i] + t[1]
+                else
+                    return y[i]
+                end
+            end
+            tmp1 = ntuple(i -> 0, Val(N))
+        elseif t[1] > 0
+            tmp2 = ntuple(i -> i == N ? y[i] + t[1] : y[i], Val(N))
+            tmp1 = t .- t[1]
+        else
+            tmp1, tmp2 = t, y
+        end
+        return new{N}(tmp1, tmp2)
+    end
+
+    function semi_elementary_monomial(x::Vector{Int64}, y::NTuple{N,Int64}, ::Val{N}) where {N}
+        #assumes x is sorted, so don't need to sort, also assume length of x is N 
+        if x[N] - x[1] == 1
+            c = sum(x) - N * x[1]
+            tmp2 = ntuple(Val(N)) do i
+                if i == c
+                    return y[i] + 1
+                elseif i == N
+                    return y[i] + x[1]
+                else
+                    return y[i]
+                end
+            end
+            tmp1 = ntuple(i -> 0, Val(N))
+        elseif x[1] > 0
+            tmp2 = ntuple(i -> i == N ? y[i] + x[1] : y[i], Val(N))
+            tmp1 = ntuple(i -> x[i] - x[1], Val(N))
+        else
+            tmp1 = ntuple(i -> x[i], Val(N))
+            tmp2 = y
+        end
+        return new{N}(tmp1, tmp2)
+    end
+
 end
 
 
 dim(x::semi_elementary_monomial{N}) where {N} = N
-is_elementary(x::semi_elementary_monomial) = x.sp_term[end]==0
-Base.:(==)(x::semi_elementary_monomial,y::semi_elementary_monomial) = (x.sp_term==y.sp_term) && (x.powers==y.powers)
-function Base.isless(x::semi_elementary_monomial{N},y::semi_elementary_monomial{N}) where {N}
-    for i=N:-1:1
+is_elementary(x::semi_elementary_monomial) = x.sp_term[end] == 0
+Base.:(==)(x::semi_elementary_monomial, y::semi_elementary_monomial) = (x.sp_term == y.sp_term) && (x.powers == y.powers)
+function Base.isless(x::semi_elementary_monomial{N}, y::semi_elementary_monomial{N}) where {N}
+    for i = N:-1:1
         x.sp_term[i] != y.sp_term[i] && return x.sp_term[i] < y.sp_term[i]
     end
-    s1,s2 = sum(x.powers),sum(y.powers)
-    return s1!=s2 ? s1 < s2 : x.powers < y.powers
+    s1, s2 = sum(x.powers), sum(y.powers)
+    return s1 != s2 ? s1 < s2 : x.powers < y.powers
     #return x.powers < y.powers
 end
 
 function to_string(x::semi_elementary_monomial)
     if !is_elementary(x)
-        head = "S"*string(x.sp_term)
+        head = "S" * string(x.sp_term)
     else
         head = ""
     end
-    for (i,n) in enumerate(x.powers)
+    for (i, n) in enumerate(x.powers)
         if n == 0
             continue
         elseif n == 1
@@ -142,4 +189,4 @@ function to_string(x::semi_elementary_monomial)
     end
     return head
 end
-Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::semi_elementary_monomial) = join(io,to_string(x))
+Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::semi_elementary_monomial) = join(io, to_string(x))
