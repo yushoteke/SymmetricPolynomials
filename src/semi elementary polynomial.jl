@@ -466,7 +466,7 @@ function decompose9(x::semi_elementary_monomial{N}) where {N}
         while cur_semi_token != startof(D.polynomial.terms)
             cur_semi_token = regress((D.polynomial.terms, cur_semi_token))
             key = deref_key((D.polynomial.terms, cur_semi_token))
-            @inbounds key.sp_term == D.highest_terms[1].sp_term ? push!(D.highest_terms, key) : break
+            key.sp_term == D.highest_terms[1].sp_term ? push!(D.highest_terms, key) : break
         end
         lower_order_representation7(D)
 
@@ -475,16 +475,16 @@ function decompose9(x::semi_elementary_monomial{N}) where {N}
 end
 
 function lower_order_representation7(D::polynomial_decomposer{N}) where {N}
-    @inbounds is_elementary(D.highest_terms[1]) && return
-    @inbounds sp = D.highest_terms[1].sp_term
+    is_elementary(D.highest_terms[1]) && return
+    sp = D.highest_terms[1].sp_term
     empty!(D.original_coefficients)
     for x in D.highest_terms
-        @inbounds push!(D.original_coefficients, D.polynomial.terms[x])
+        push!(D.original_coefficients, D.polynomial.terms[x])
     end
     num_highest = N - findfirst(i -> i == sp[end], sp) + 1
     empty!(D.factor)
     for i = 1:N
-        @inbounds push!(D.factor, i > N - num_highest ? sp[i] - 1 : sp[i])
+        push!(D.factor, i > N - num_highest ? sp[i] - 1 : sp[i])
     end
 
     count_occurrences!(D.factor, D.f_keys, D.f_values)
@@ -499,19 +499,107 @@ function lower_order_representation7(D::polynomial_decomposer{N}) where {N}
         coeff = 1
         for i = 2:length(D.f_keys)
             if D.f_keys[i-1] == D.f_keys[i] - 1
-                @inbounds coeff *= binomial(D.f_values[i] - way[i] + way[i-1], way[i-1])
+                coeff *= binomial(D.f_values[i] - way[i] + way[i-1], way[i-1])
             end
         end
         sort!(D.new_term)
-        @inbounds tup = ntuple(i -> D.new_term[i], Val(N))
+        tup = ntuple(i -> D.new_term[i], Val(N))
         for (ind, x) ∈ enumerate(D.highest_terms)
-            @inbounds push!(D.polynomial, semi_elementary_monomial(tup, x.powers, true), -coeff * D.original_coefficients[ind])
+            push!(D.polynomial, semi_elementary_monomial(tup, x.powers, true), -coeff * D.original_coefficients[ind])
         end
     end
     sort!(D.factor)
-    @inbounds tup = ntuple(i -> D.factor[i], Val(N))
+    tup = ntuple(i -> D.factor[i], Val(N))
     for (ind, x) ∈ enumerate(D.highest_terms)
-        @inbounds tmp = ntuple(i -> i == num_highest ? x.powers[i] + 1 : x.powers[i], Val(N))
-        @inbounds push!(D.polynomial, semi_elementary_monomial(tup, tmp, true), D.original_coefficients[ind])
+        tmp = ntuple(i -> i == num_highest ? x.powers[i] + 1 : x.powers[i], Val(N))
+        push!(D.polynomial, semi_elementary_monomial(tup, tmp, true), D.original_coefficients[ind])
     end
 end
+
+struct semi_elementary_polynomial2{N}
+    terms::Dict{semi_elementary_monomial{N},Int128}
+    sort_terms::SortedSet{semi_elementary_monomial{N}}
+    semi_elementary_polynomial2(N) = new{N}(Dict{semi_elementary_monomial{N},Int128}(),
+        SortedSet{semi_elementary_monomial{N}}())
+end
+
+function Base.push!(x::semi_elementary_polynomial2{N}, k::semi_elementary_monomial{N}, v::Union{Integer,Rational}) where {N}
+    if !haskey(x.terms, k)
+        x.terms[k] = v
+        Base.insert!(x.sort_terms, k)
+    elseif x.terms[k] != -v
+        x.terms[k] += v
+    else
+        pop!(x.terms, k)
+        pop!(x.sort_terms, k)
+    end
+end
+
+function poly2_to_poly(x::semi_elementary_polynomial2{N}) where {N}
+    p = semi_elementary_polynomial(N)
+    for (k, v) ∈ x.terms
+        p.terms[k] = v
+    end
+    return p
+end
+
+function decompose10(x::semi_elementary_monomial{N}) where {N}
+    polynomial = semi_elementary_polynomial2(N)
+    push!(polynomial, x, 1)
+
+    iter = ways_place_containers_iterator([1], 1) #init variables are arbitrary, since they will be replaced anyways
+    highest_terms = semi_elementary_monomial{N}[]
+    original_coefficients = Int128[]
+    f_keys = Int64[]
+    f_values = Int64[]
+    representative = Int64[]
+
+    while true
+        is_elementary(last(polynomial.sort_terms)) && break
+
+        #setup part, find highest terms
+        empty!(highest_terms)
+        push!(highest_terms, last(polynomial.sort_terms))
+        cur_semi_token = lastindex(polynomial.sort_terms)
+        while cur_semi_token != startof(polynomial.sort_terms)
+            cur_semi_token = regress((polynomial.sort_terms, cur_semi_token))
+            key = deref((polynomial.sort_terms, cur_semi_token))
+            key.sp_term == highest_terms[1].sp_term ? push!(highest_terms, key) : break
+        end
+
+
+        #lower polynomial order part
+        sp = highest_terms[1].sp_term
+        empty!(original_coefficients)
+        for term in highest_terms
+            push!(original_coefficients, polynomial.terms[term])
+        end
+        num_highest = N - findfirst(i -> i == sp[end], sp) + 1
+        factor = ntuple(i -> i > N - num_highest ? sp[i] - 1 : sp[i], N)
+
+        count_occurrences!(factor, f_keys, f_values)
+        reset!(iter, f_values, num_highest)
+
+        for way ∈ iter
+            canonical_placement!(f_values, way, representative)
+            new_term = ntuple(i -> factor[i] + representative[i], Val(N))
+            coeff = 1
+            for i = 2:length(f_keys)
+                if f_keys[i-1] == f_keys[i] - 1
+                    coeff *= binomial(f_values[i] - way[i] + way[i-1], way[i-1])
+                end
+            end
+            for (ind, x) ∈ enumerate(highest_terms)
+                push!(polynomial, semi_elementary_monomial(new_term, x.powers), -coeff * original_coefficients[ind])
+            end
+        end
+
+        for (ind, x) ∈ enumerate(highest_terms)
+            tmp = ntuple(i -> i == num_highest ? x.powers[i] + 1 : x.powers[i], Val(N))
+            push!(polynomial, semi_elementary_monomial(factor, tmp), original_coefficients[ind])
+        end
+    end
+    return polynomial
+end
+
+#for decompose 11, set 2 polynomials, where one contains only elementary elements

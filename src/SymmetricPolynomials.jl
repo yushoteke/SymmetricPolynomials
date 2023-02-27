@@ -23,10 +23,11 @@ p6 = SymmetricPolynomials.decompose6(x);
 p7 = SymmetricPolynomials.decompose7(x);
 p8 = SymmetricPolynomials.decompose8(x);
 p9 = SymmetricPolynomials.decompose9(x);
+p10 = SymmetricPolynomials.poly2_to_poly(SymmetricPolynomials.decompose10(x))
 
-println(p1 == p2 == p3 == p4 == p5 == p6 == p7 == p8 == p9)
+println(p1 == p2 == p3 == p4 == p5 == p6 == p7 == p8 == p9 == p10)
 
-for i = 20:10:60
+for i = 70:10:80
   println("i = $(i)")
   tmp = SymmetricPolynomials.semi_elementary_monomial((0, 0, 0, 0, 0, 0, i), (0, 0, 0, 0, 0, 0, 0))
   @time res1 = SymmetricPolynomials.decompose(tmp)
@@ -38,8 +39,17 @@ for i = 20:10:60
   @time res7 = SymmetricPolynomials.decompose7(tmp)
   @time res8 = SymmetricPolynomials.decompose8(tmp)
   @time res9 = SymmetricPolynomials.decompose9(tmp)
-  println("results are same:", res1 == res2 == res3 == res4 == res5 == res6 == res8 == res9)
+  @time res10_tmp = SymmetricPolynomials.decompose10(tmp)
+  res10 = SymmetricPolynomials.poly2_to_poly(res10_tmp)
+  println("results are same:", res1 == res2 == res3 == res4 == res5 == res6 == res8 == res9 == res10)
 end
+
+for i = 10:10:80
+  println("i=", i)
+  tmp = SymmetricPolynomials.semi_elementary_monomial((0, 0, 0, 0, 0, 0, i), (0, 0, 0, 0, 0, 0, 0))
+  SymmetricPolynomials.decompose10(tmp)
+end
+
 
 for i = 50:10:80
   println("i = $(i)")
@@ -72,6 +82,7 @@ tmp = SymmetricPolynomials.decompose3(x);
 @profview SymmetricPolynomials.decompose3(x)
 @profview SymmetricPolynomials.decompose7(x)
 @profview SymmetricPolynomials.decompose9(x)
+@profview SymmetricPolynomials.decompose10(x)
 
 iter = SymmetricPolynomials.ways_place_containers_iterator([2, 1, 3, 4, 5], 11)
 
