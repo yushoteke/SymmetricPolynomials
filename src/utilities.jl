@@ -240,3 +240,116 @@ function count_occurrences!(factor, x, y)
         end
     end
 end
+
+"""
+    successively generates restricted partitions
+    For example, suppose the starting tuple is 
+    (0, 0, 0, 10)
+    Then generate the following sequence
+    (0, 0, 0, 10)
+    (0, 0, 1, 9)
+    (0, 0, 0, 9)
+    (0, 0, 2, 8)
+    (0, 1, 1, 8)
+    (0, 0, 1, 8)
+    (0, 0, 0, 8)
+    (0, 0, 3, 7)
+    (0, 1, 2, 7)
+    (0, 0, 2, 7)
+    (0, 1, 1, 7)
+    (0, 0, 1, 7)
+    (0, 0, 0, 7)
+    (0, 0, 4, 6)
+    (0, 1, 3, 6)
+    (0, 0, 3, 6)
+    (0, 2, 2, 6)
+    (0, 1, 2, 6)
+    (0, 0, 2, 6)
+    (0, 1, 1, 6)
+    (0, 0, 1, 6)
+    (0, 0, 0, 6)
+    (0, 0, 5, 5)
+    (0, 1, 4, 5)
+    (0, 0, 4, 5)
+    (0, 2, 3, 5)
+    (0, 1, 3, 5)
+    (0, 0, 3, 5)
+    (0, 2, 2, 5)
+    (0, 1, 2, 5)
+    (0, 0, 2, 5)
+    (0, 1, 1, 5)
+    (0, 0, 1, 5)
+    (0, 0, 0, 5)
+    (0, 2, 4, 4)
+    (0, 1, 4, 4)
+    (0, 0, 4, 4)
+    (0, 3, 3, 4)
+    (0, 2, 3, 4)
+    (0, 1, 3, 4)
+    (0, 0, 3, 4)
+    (0, 2, 2, 4)
+    (0, 1, 2, 4)
+    (0, 0, 2, 4)
+    (0, 1, 1, 4)
+    (0, 0, 1, 4)
+    (0, 0, 0, 4)
+    (0, 3, 3, 3)
+    (0, 2, 3, 3)
+    (0, 1, 3, 3)
+    (0, 0, 3, 3)
+    (0, 2, 2, 3)
+    (0, 1, 2, 3)
+    (0, 0, 2, 3)
+    (0, 1, 1, 3)
+    (0, 0, 1, 3)
+    (0, 0, 0, 3)
+    (0, 2, 2, 2)
+    (0, 1, 2, 2)
+    (0, 0, 2, 2)
+    (0, 1, 1, 2)
+    (0, 0, 1, 2)
+    (0, 0, 0, 2)
+"""
+struct sp_term_iterator{N}
+    vec::Vector{Int64}
+    num_balls::Int64
+end
+
+sp_term_iterator(num_balls, ::Val{N}) where {N} = sp_term_iterator{N}(zeros(Int64, N - 1), num_balls)
+
+function fill_in_greedily_ordered!(tgt_vec, start_ind, num_balls)
+    #fill in array so no element is larger than previous
+    for i = start_ind:length(tgt_vec)
+        tgt_vec[i] = min(tgt_vec[i-1], num_balls)
+        num_balls -= tgt_vec[i]
+    end
+end
+
+function sp_term_vec_to_tuple(x::sp_term_iterator{N}) where {N}
+    #length of vec is always N-1
+    return ntuple(Val(N)) do i
+        i == 1 && return 0
+        return x.vec[N-i+1]
+    end
+end
+
+function Base.iterate(x::sp_term_iterator{N}, state=0) where {N}
+    #currently unsafe after finished iteration once
+
+    # if state = 0, then that means the array needs to be initialized
+    if state == 0
+        x.vec[1] = x.num_balls
+        return (sp_term_vec_to_tuple(x), state + 1)
+    end
+
+    #if x.vec[1] = 1, that means iteration is over
+    sum(x.vec) == 2 && return nothing
+
+    #if vec has already been initialized, then find the rightmost column that is lowerable
+    ind = findlast(!iszero, x.vec)
+    x.vec[ind] -= 1
+    unused_balls = x.num_balls - sum(x.vec[1:ind])
+    fill_in_greedily_ordered!(x.vec, ind + 1, unused_balls)
+    return (sp_term_vec_to_tuple(x), state + 1)
+end
+

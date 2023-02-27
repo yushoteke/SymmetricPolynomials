@@ -603,3 +603,145 @@ function decompose10(x::semi_elementary_monomial{N}) where {N}
 end
 
 #for decompose 11, set 2 polynomials, where one contains only elementary elements
+
+#since sorting is a big issue, we can create many small sorted containers of different "rank".
+#for example, suppose we want to decompose S((0,0,0,0,0,80),(0,0,0,0,0,0))
+#Then we could create a length 80 vector V, where V[i] can only hold elements of the form 
+#S((0,x,x,x,x,i),(x,x,x,x,x,x)). This way, the size of each sorted container is considerably smaller
+#this method also incorporates the previous idea
+
+#try @inline to improve code readability
+using Combinatorics
+
+struct semi_elementary_polynomial3{N}
+    coeffs::Dict{semi_elementary_monomial{N},Int128}
+    s_terms::Dict{NTuple{N,Int64},Set{semi_elementary_monomial{N}}}
+end
+
+function semi_elementary_polynomial3(N)
+    return semi_elementary_polynomial3{N}(Dict(), Dict())
+end
+
+function poly3_to_poly(x::semi_elementary_polynomial3{N}) where {N}
+    p = semi_elementary_polynomial(N)
+    for (k, v) ∈ x.coeffs
+        p.terms[k] = v
+    end
+    return p
+end
+
+function Base.push!(p::semi_elementary_polynomial3{N}, x::semi_elementary_monomial{N}, v::Union{Integer,Rational}) where {N}
+    if !haskey(p.coeffs, x)
+        p.coeffs[x] = v
+        if !haskey(p.s_terms, x.sp_term)
+            p.s_terms[x.sp_term] = Set()
+        end
+        if x.sp_term[N] != 0
+            push!(p.s_terms[x.sp_term], x)
+        end
+    elseif p.coeffs[x] != -v
+        p.coeffs[x] += v
+    else
+        pop!(p.coeffs, x)
+        if x.sp_term[N] != 0
+            pop!(p.s_terms[x.sp_term], x)
+        end
+    end
+end
+
+function partition_to_tuple(p::Vector{Int64}, ::Val{N}) where {N}
+    # for example, [4,2,1], 5 returns (0,0,1,2,4)
+    #which means 
+    #1 -> 0
+    #2 -> 0
+    #3 -> p[3]
+    #4 -> p[2]
+    #5 -> p[1]
+    return ntuple(i -> (i >= N + 1 - length(p)) ? p[N+1-i] : 0, N)
+end
+
+function decompose11(x::semi_elementary_monomial{N}) where {N}
+    rank = sum(x.sp_term)
+    p = semi_elementary_polynomial3(N)
+    push!(p, x, 1)
+
+    iter = ways_place_containers_iterator([1], 1)
+    f_keys = Int64[]
+    f_values = Int64[]
+    representative = Int64[]
+    sp_iter = sp_term_iterator(rank, Val(N))
+
+    for sp ∈ sp_iter
+        highest_terms = p.s_terms[sp] |> collect
+        orig_coeffs = map(x -> p.coeffs[x], highest_terms)
+        num_highest = N - findfirst(i -> i == sp[end], sp) + 1
+        factor = ntuple(i -> i > N - num_highest ? sp[i] - 1 : sp[i], N)
+
+        count_occurrences!(factor, f_keys, f_values)
+        reset!(iter, f_values, num_highest)
+
+        for way ∈ iter
+            canonical_placement!(f_values, way, representative)
+            new_term = ntuple(i -> factor[i] + representative[i], N)
+            coeff = 1
+            for i = 2:length(f_keys)
+                if f_keys[i-1] == f_keys[i] - 1
+                    coeff *= binomial(f_values[i] - way[i] + way[i-1], way[i-1])
+                end
+            end
+            for (ind, x) ∈ enumerate(highest_terms)
+                push!(p, semi_elementary_monomial(new_term, x.powers), -coeff * orig_coeffs[ind])
+            end
+        end
+
+        for (ind, x) ∈ enumerate(highest_terms)
+            tmp = ntuple(i -> i == num_highest ? x.powers[i] + 1 : x.powers[i], Val(N))
+            push!(p, semi_elementary_monomial(factor, tmp), orig_coeffs[ind])
+        end
+        #pop!(p.s_terms, sp)
+    end
+    return p
+end
+
+function decompose12(x::semi_elementary_monomial{N}) where {N}
+    rank = sum(x.sp_term)
+    p = semi_elementary_polynomial3(N)
+    push!(p, x, 1)
+
+    iter = ways_place_containers_iterator([1], 1)
+    f_keys = Int64[]
+    f_values = Int64[]
+    representative = Int64[]
+    sp_iter = sp_term_iterator(rank, Val(N))
+
+    for sp ∈ sp_iter
+        highest_terms = p.s_terms[sp] |> collect
+        orig_coeffs = map(x -> p.coeffs[x], highest_terms)
+        num_highest = N - findfirst(i -> i == sp[end], sp) + 1
+        factor = ntuple(i -> i > N - num_highest ? sp[i] - 1 : sp[i], N)
+
+        count_occurrences!(factor, f_keys, f_values)
+        reset!(iter, f_values, num_highest)
+
+        for way ∈ iter
+            canonical_placement!(f_values, way, representative)
+            new_term = ntuple(i -> factor[i] + representative[i], N)
+            coeff = 1
+            for i = 2:length(f_keys)
+                if f_keys[i-1] == f_keys[i] - 1
+                    coeff *= binomial(f_values[i] - way[i] + way[i-1], way[i-1])
+                end
+            end
+            for (ind, x) ∈ enumerate(highest_terms)
+                push!(p, semi_elementary_monomial(new_term, x.powers), -coeff * orig_coeffs[ind])
+            end
+        end
+
+        for (ind, x) ∈ enumerate(highest_terms)
+            tmp = ntuple(i -> i == num_highest ? x.powers[i] + 1 : x.powers[i], Val(N))
+            push!(p, semi_elementary_monomial(factor, tmp), orig_coeffs[ind])
+        end
+        pop!(p.s_terms, sp)
+    end
+    return p
+end
