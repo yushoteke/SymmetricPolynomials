@@ -1,5 +1,6 @@
 using TupleTools
 using DataStructures
+using TimerOutputs
 
 include("utilities.jl")
 include("semi elementary monomial.jl")
@@ -9,7 +10,8 @@ include("evaluate.jl")
 
 x = semi_elementary_monomial((0, 0, 0, 10), (0, 0, 0, 0))
 
-
+p13_tmp = decompose13(x)
+p13 = poly4_to_poly(p13_tmp)
 p12_tmp = decompose12(x)
 p12 = poly3_to_poly(p12_tmp)
 p11_tmp = decompose11(x)
@@ -26,9 +28,9 @@ p3 = decompose3(x);
 p2 = decompose2(x);
 p1 = decompose(x);
 
-println(p1 == p2 == p3 == p4 == p5 == p6 == p7 == p8 == p9 == p10 == p11 == p12)
+println(p1 == p2 == p3 == p4 == p5 == p6 == p7 == p8 == p9 == p10 == p11 == p12 == p13)
 
-for i = 60:10:80
+for i = 20:10:60
   println("i = $(i)")
   tmp = semi_elementary_monomial((0, 0, 0, 0, 0, 0, i), (0, 0, 0, 0, 0, 0, 0))
   @time res1 = decompose(tmp)
@@ -46,7 +48,10 @@ for i = 60:10:80
   res11 = poly3_to_poly(res11_tmp)
   @time res12_tmp = decompose12(tmp)
   res12 = poly3_to_poly(res12_tmp)
-  println("results are same:", res1 == res2 == res3 == res4 == res5 == res6 == res8 == res9 == res10 == res11 == res12)
+  @time res13_tmp = decompose13(tmp)
+  res13 = poly4_to_poly(res13_tmp)
+  println("results are same:", res1 == res2 == res3 == res4 == res5 == res6 ==
+                               res8 == res9 == res10 == res11 == res12 == res13)
 end
 
 for i = 10:10:80
@@ -85,7 +90,8 @@ for i = 70:10:70
   @time decompose12(tmp)
 end
 
-x = semi_elementary_monomial((0, 0, 0, 0, 0, 0, 50), (0, 0, 0, 0, 0, 0, 0))
+
+x = semi_elementary_monomial((0, 0, 0, 0, 0, 0, 22), (0, 0, 0, 0, 0, 0, 0))
 @timev decompose3(x);
 
 tmp = decompose3(x);
@@ -95,7 +101,10 @@ tmp = decompose3(x);
 @profview decompose9(x)
 @profview decompose10(x)
 @profview decompose12(x)
+@profview decompose13(x)
 @code_warntype decompose11(x)
+@timev decompose12_timeit(x);
+@timev decompose13_timeit(x);
 
 iter = ways_place_containers_iterator([2, 1, 3, 4, 5], 11)
 

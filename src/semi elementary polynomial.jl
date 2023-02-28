@@ -649,6 +649,30 @@ function Base.push!(p::semi_elementary_polynomial3{N}, x::semi_elementary_monomi
     end
 end
 
+function push_timeit!(p::semi_elementary_polynomial3{N}, x::semi_elementary_monomial{N}, v::Union{Integer,Rational}, timer) where {N}
+
+
+    if !haskey(p.coeffs, x)
+        @timeit timer "set coeff" p.coeffs[x] = v
+        if !haskey(p.s_terms, x.sp_term)
+            @timeit timer "create new set" p.s_terms[x.sp_term] = Set()
+            p.calls[1] += 1
+        end
+        if x.sp_term[N] != 0
+            tmp = @timeit timer "get container alias" p.s_terms[x.sp_term]
+            @timeit timer "push new term" push!(tmp, x)
+        end
+    elseif p.coeffs[x] != -v
+        @timeit timer "set coeff" p.coeffs[x] += v
+    else
+        @timeit timer "pop coeff" pop!(p.coeffs, x)
+        if x.sp_term[N] != 0
+            @timeit timer "pop term" pop!(p.s_terms[x.sp_term], x)
+        end
+    end
+
+end
+
 function partition_to_tuple(p::Vector{Int64}, ::Val{N}) where {N}
     # for example, [4,2,1], 5 returns (0,0,1,2,4)
     #which means 
@@ -745,3 +769,218 @@ function decompose12(x::semi_elementary_monomial{N}) where {N}
     end
     return p
 end
+
+using TimerOutputs
+
+function decompose12_timeit(x::semi_elementary_monomial{N}) where {N}
+    timer = TimerOutput()
+    rank = sum(x.sp_term)
+    p = semi_elementary_polynomial3(N)
+    sizehint!(p.coeffs, 2^18)
+    sizehint!(p.s_terms, 2^16)
+    push!(p, x, 1)
+
+    iter = ways_place_containers_iterator([1], 1)
+    f_keys = Int64[]
+    f_values = Int64[]
+    representative = Int64[]
+    sp_iter = sp_term_iterator(rank, Val(N))
+
+    for sp ∈ sp_iter
+        @timeit timer "collect" begin
+            highest_terms = @timeit timer "collect highest term" p.s_terms[sp] |> collect
+            orig_coeffs = @timeit timer "collect coefficients" map(x -> p.coeffs[x], highest_terms)
+            num_highest = N - findfirst(i -> i == sp[end], sp) + 1
+            factor = ntuple(i -> i > N - num_highest ? sp[i] - 1 : sp[i], N)
+        end
+
+        count_occurrences!(factor, f_keys, f_values)
+        reset!(iter, f_values, num_highest)
+
+        @timeit timer "lower order" begin
+            for way ∈ iter
+                canonical_placement!(f_values, way, representative)
+
+                new_term = @inbounds @timeit timer "create tuple" ntuple(i -> factor[i] + representative[i], Val(N))
+                coeff = 1
+                for i = 2:length(f_keys)
+                    if f_keys[i-1] == f_keys[i] - 1
+                        coeff *= binomial(f_values[i] - way[i] + way[i-1], way[i-1])
+                    end
+                end
+                @timeit timer "push1" begin
+                    for (ind, x) ∈ enumerate(highest_terms)
+                        push_timeit!(p, semi_elementary_monomial(new_term, x.powers), -coeff * orig_coeffs[ind], timer)
+                    end
+                end
+            end
+
+            @timeit timer "push2" begin
+                for (ind, x) ∈ enumerate(highest_terms)
+                    tmp = @timeit timer "create tuple 2" ntuple(i -> i == num_highest ? x.powers[i] + 1 : x.powers[i], Val(N))
+                    push_timeit!(p, semi_elementary_monomial(factor, tmp), orig_coeffs[ind], timer)
+                end
+            end
+        end
+        pop!(p.s_terms, sp)
+    end
+    println(p.calls[1])
+    show(timer)
+    return p
+end
+
+struct semi_elementary_polynomial4{N}
+    coeffs::DefaultDict{semi_elementary_monomial{N},Int128,Int128}
+    s_terms::Dict{NTuple{N,Int64},Vector{semi_elementary_monomial{N}}}
+end
+
+function semi_elementary_polynomial4(N)
+    return semi_elementary_polynomial4{N}(DefaultDict{semi_elementary_monomial{N},Int128,Int128}(zero(Int128)), Dict())
+end
+
+function poly4_to_poly(x::semi_elementary_polynomial4{N}) where {N}
+    p = semi_elementary_polynomial(N)
+    for (k, v) ∈ x.coeffs
+        p.terms[k] = v
+    end
+    return p
+end
+
+function Base.push!(p::semi_elementary_polynomial4{N}, x::semi_elementary_monomial{N}, v::Union{Integer,Rational}) where {N}
+    if !haskey(p.coeffs, x)
+        p.coeffs[x] = v
+        !haskey(p.s_terms, x.sp_term) && (p.s_terms[x.sp_term] = [])
+        x.sp_term[N] != 0 && push!(p.s_terms[x.sp_term], x)
+    elseif p.coeffs[x] != -v
+        p.coeffs[x] += v
+    else
+        pop!(p.coeffs, x)
+    end
+end
+
+function decompose13(x::semi_elementary_monomial{N}) where {N}
+    rank = sum(x.sp_term)
+    p = semi_elementary_polynomial4(N)
+    push!(p, x, 1)
+
+    iter = ways_place_containers_iterator([1], 1)
+    f_keys = Int64[]
+    f_values = Int64[]
+    representative = Int64[]
+    sp_iter = sp_term_iterator(rank, Val(N))
+    highest_terms = Dict{semi_elementary_monomial{N},Int128}()
+
+    for sp ∈ sp_iter
+        empty!(highest_terms)
+        for term ∈ p.s_terms[sp]
+            highest_terms[term] = p.coeffs[term]
+        end
+        num_highest = N - findfirst(i -> i == sp[end], sp) + 1
+        factor = ntuple(i -> i > N - num_highest ? sp[i] - 1 : sp[i], N)
+
+        count_occurrences!(factor, f_keys, f_values)
+        reset!(iter, f_values, num_highest)
+
+        for way ∈ iter
+            canonical_placement!(f_values, way, representative)
+            new_term = ntuple(i -> factor[i] + representative[i], N)
+            coeff = 1
+            for i = 2:length(f_keys)
+                if f_keys[i-1] == f_keys[i] - 1
+                    coeff *= binomial(f_values[i] - way[i] + way[i-1], way[i-1])
+                end
+            end
+            for (sp, c) in highest_terms
+                push!(p, semi_elementary_monomial(new_term, sp.powers), -coeff * c)
+            end
+        end
+
+        for (sp, c) in highest_terms
+            tmp = ntuple(i -> i == num_highest ? sp.powers[i] + 1 : sp.powers[i], Val(N))
+            push!(p, semi_elementary_monomial(factor, tmp), c)
+        end
+
+        pop!(p.s_terms, sp)
+    end
+    return p
+end
+
+
+function push_timeit!(p::semi_elementary_polynomial4{N}, x::semi_elementary_monomial{N}, v::Union{Integer,Rational}, timer) where {N}
+    if !haskey(p.coeffs, x)
+        @timeit timer "set coeff" p.coeffs[x] = v
+        @timeit timer "alloc arr" (!haskey(p.s_terms, x.sp_term) && (p.s_terms[x.sp_term] = []))
+        @timeit timer "push term" (x.sp_term[N] != 0 && push!(p.s_terms[x.sp_term], x))
+    elseif p.coeffs[x] != -v
+        @timeit timer "add coeff" p.coeffs[x] += v
+    else
+        @timeit timer "pop coeff" pop!(p.coeffs, x)
+    end
+end
+
+function decompose13_timeit(x::semi_elementary_monomial{N}) where {N}
+    rank = sum(x.sp_term)
+    p = semi_elementary_polynomial4(N)
+    x.sp_term == (0, 0, 0, 0, 0, 0, 40) && sizehint!(p.coeffs, 60000)
+    push!(p, x, 1)
+    timer = TimerOutput()
+
+    @timeit timer "setup" begin
+        iter = ways_place_containers_iterator([1], 1)
+        f_keys = Int64[]
+        f_values = Int64[]
+        representative = Int64[]
+        sp_iter = sp_term_iterator(rank, Val(N))
+        highest_terms = Dict{semi_elementary_monomial{N},Int128}()
+    end
+
+    for sp ∈ sp_iter
+        @timeit timer "get highest coeff" begin
+            empty!(highest_terms)
+            for term ∈ p.s_terms[sp]
+                highest_terms[term] = p.coeffs[term]
+            end
+        end
+
+        num_highest = N - findfirst(i -> i == sp[end], sp) + 1
+        factor = @timeit timer "create factor" ntuple(i -> i > N - num_highest ? sp[i] - 1 : sp[i], Val(N))
+        #@code_warntype ntuple(i -> i > N - num_highest ? sp[i] - 1 : sp[i], Val(N))
+        #tmp = [factor...]
+
+        @timeit timer "reset iter and count occurences" begin
+            count_occurrences!(factor, f_keys, f_values)
+            reset!(iter, f_values, num_highest)
+        end
+        println("f_keys:",f_keys," f_values:",f_values)
+
+        for way ∈ iter
+            @timeit timer "calc canonical placement" canonical_placement!(f_values, way, representative)
+            #@code_warntype ntuple(i -> tmp[i] + representative[i], Val(N))
+            #return
+            new_term = @timeit timer "create new term" ntuple(i -> factor[i] + representative[i], Val(N))
+            coeff = 1
+            for i = 2:length(f_keys)
+                if f_keys[i-1] == f_keys[i] - 1
+                    coeff *= binomial(f_values[i] - way[i] + way[i-1], way[i-1])
+                end
+            end
+            @timeit timer "push" begin
+                for (sp, c) in highest_terms
+                    push_timeit!(p, semi_elementary_monomial(new_term, sp.powers), -coeff * c, timer)
+                end
+            end
+        end
+
+        @timeit timer "push" begin
+            for (sp, c) in highest_terms
+                tmp = @timeit timer "create new term 2" ntuple(i -> i == num_highest ? sp.powers[i] + 1 : sp.powers[i], Val(N))
+                push_timeit!(p, semi_elementary_monomial(factor, tmp), c, timer)
+            end
+        end
+
+        @timeit timer "dealloc" pop!(p.s_terms, sp)
+    end
+    show(timer)
+    return p
+end
+
