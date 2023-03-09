@@ -39,3 +39,33 @@ Also, remove redundant keys from the dictionaries while iterating reduced the li
 to happen.
 These improvements collectively reduced runtime from 21s to 18.5s. Memory allocated increated from
 17.58M to 38.22M, memory usage increased from 2.45GiB to 5.57GiB
+
+In commit "reduce usage of sets"
+An inquiry into memory usage suggests that most of allocated memory is spent on creating new sets
+and pushing terms into dictionary. The second most allocated is collecting coefficients into a container.
+These improvements collectively reduced fruntime from 18.5s to 16.5s.
+Memory allocated decreased from 38.22M to 5.42M, and memory usage decreased from 5.57GiB to 2.623GiB
+
+In commit "further investigations"
+A further analysis shows that in decompose12, the creation of new_term is type unstable. Used some
+gimmick to make it type stable, but did not result in performance gains.
+Memory analysis shows that most of the time is spent to check if key is in dictionary, get value
+corresponding to key, and modify value corresponding to key. If I cannot find anymore mathematical
+improvements, then the next step is to find a better dictionary.
+
+Some other thoughts:
+Since all tuples are fixed length, maybe think in trie direction?
+Since we sometimes group all terms which looks like S(a,x), where a is fixed, together, maybe
+think of this as a prefix?
+Inside push!, sometimes there's double lookup. Maybe tokens could fix this?
+
+In commit "array pool"
+By doing memory analysis, most of the memories allocations occur in push!. The suspected reasons
+are, when the arrays grow out of size, it needs to be dynamically resized, which results in more
+allocation. Since there are many allocation of small and medium sized arrays, the solution to this
+is to use an array pool. When the polynomial needs an array, it "borrows" an array from the pool.
+When the pool is out of array, it creates a new one. When the polynomial finishes using the array,
+it "returns" the array to the pool.
+Made two changes. First minor change in utility.jl file avoids allocating extra arrays.
+Then, the basic array pool implementation reduced memory allocation from 5.42M to 3.9M and memory
+usage from 2.623GiB to 1.91GiB

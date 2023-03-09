@@ -1,15 +1,32 @@
 using TupleTools
 using DataStructures
 using TimerOutputs
+using Cthulhu
+using Profile
 
+include("array pool dict.jl")
 include("utilities.jl")
 include("semi elementary monomial.jl")
 include("semi elementary polynomial.jl")
 include("evaluate.jl")
 
-
+#memory analysis for decompose13 
+#start julia with "julia --track-allocation=all"
 x = semi_elementary_monomial((0, 0, 0, 10), (0, 0, 0, 0))
+decompose13(x)
+Profile.clear_malloc_data()
+x = semi_elementary_monomial((0, 0, 0, 0, 0, 0, 50), (0, 0, 0, 0, 0, 0, 0))
+@time decompose13(x);
+#open another julia 
+using Coverage
+analyze_malloc(".")
 
+x = semi_elementary_monomial((0, 0, 0, 0, 15), (0, 0, 0, 0, 0))
+
+p15_tmp = decompose15(x);
+p15 = poly5_to_poly(p15_tmp)
+p14_tmp = decompose14(x);
+p14 = poly4_to_poly(p14_tmp)
 p13_tmp = decompose13(x)
 p13 = poly4_to_poly(p13_tmp)
 p12_tmp = decompose12(x)
@@ -28,11 +45,13 @@ p3 = decompose3(x);
 p2 = decompose2(x);
 p1 = decompose(x);
 
-println(p1 == p2 == p3 == p4 == p5 == p6 == p7 == p8 == p9 == p10 == p11 == p12 == p13)
+println(p1 == p2 == p3 == p4 == p5 == p6 == p7 == p8 == p9 == p10 == p11 == p12 == p13 == p14)
+println(p1 == p15)
 
-for i = 20:10:60
+for i = 70:10:70
   println("i = $(i)")
   tmp = semi_elementary_monomial((0, 0, 0, 0, 0, 0, i), (0, 0, 0, 0, 0, 0, 0))
+  #=
   @time res1 = decompose(tmp)
   @time res2 = decompose2(tmp)
   @time res3 = decompose3(tmp)
@@ -41,6 +60,7 @@ for i = 20:10:60
   @time res6 = decompose6(tmp)
   @time res7 = decompose7(tmp)
   @time res8 = decompose8(tmp)
+  =#
   @time res9 = decompose9(tmp)
   @time res10_tmp = decompose10(tmp)
   res10 = poly2_to_poly(res10_tmp)
@@ -50,8 +70,12 @@ for i = 20:10:60
   res12 = poly3_to_poly(res12_tmp)
   @time res13_tmp = decompose13(tmp)
   res13 = poly4_to_poly(res13_tmp)
-  println("results are same:", res1 == res2 == res3 == res4 == res5 == res6 ==
-                               res8 == res9 == res10 == res11 == res12 == res13)
+  @time res14_tmp = decompose14(tmp)
+  res14 = poly4_to_poly(res14_tmp)
+  @time res15_tmp = decompose15(tmp)
+  res15 = poly5_to_poly(res15_tmp)
+  #println("results are same:",res1 == res2 == res3 == res4 == res5 == res6 == res8 == res9)
+  println("results are same:", res9 == res10 == res11 == res12 == res13 == res14 == res15)
 end
 
 for i = 10:10:80
@@ -61,7 +85,7 @@ for i = 10:10:80
 end
 
 
-for i = 70:10:70
+for i = 55:5:65
   println("i = $(i)")
   tmp = semi_elementary_monomial((0, 0, 0, 0, 0, 0, i), (0, 0, 0, 0, 0, 0, 0))
   Base.GC.gc()
@@ -88,11 +112,15 @@ for i = 70:10:70
   @time decompose11(tmp)
   Base.GC.gc()
   @time decompose12(tmp)
+  Base.GC.gc()
+  @time decompose13(tmp)
+  Base.GC.gc()
+  @time decompose14(tmp)
 end
 
 
-x = semi_elementary_monomial((0, 0, 0, 0, 0, 0, 22), (0, 0, 0, 0, 0, 0, 0))
-@timev decompose3(x);
+x = semi_elementary_monomial((0, 0, 0, 0, 0, 0, 70), (0, 0, 0, 0, 0, 0, 0))
+@timev decompose13(x);
 
 tmp = decompose3(x);
 
