@@ -129,6 +129,7 @@ function Base.iterate(x::ways_place_containers_iterator, state=0)
     if state == 0
         sum(x.capacities) < x.num_balls && return nothing
         fill_in_greedily!(x.vec, x.capacities, 1, x.num_balls)
+        #return (view(x.vec, :), state + 1)
         return (x.vec, state + 1)
     end
 
@@ -139,6 +140,7 @@ function Base.iterate(x::ways_place_containers_iterator, state=0)
         if x.vec[i] != 0 && cum_balls != cum_capacity
             x.vec[i] -= 1
             fill_in_greedily!(x.vec, x.capacities, i + 1, cum_balls + 1)
+            #return (view(x.vec, :), state + 1)
             return (x.vec, state + 1)
         else
             cum_capacity += x.capacities[i]
@@ -348,7 +350,8 @@ function Base.iterate(x::sp_term_iterator{N}, state=0) where {N}
     #if vec has already been initialized, then find the rightmost column that is lowerable
     ind = findlast(!iszero, x.vec)
     x.vec[ind] -= 1
-    unused_balls = x.num_balls - sum(x.vec[1:ind])
+    #unused_balls = x.num_balls - sum(x.vec[1:ind])
+    unused_balls = x.num_balls - sum(view(x.vec, 1:ind))
     fill_in_greedily_ordered!(x.vec, ind + 1, unused_balls)
     return (sp_term_vec_to_tuple(x), state + 1)
 end
